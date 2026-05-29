@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ザクザクラーメンキング (Ramen Tycoon Prototype)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f7f3eb;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #d32f2f;
+            margin-bottom: 10px;
+            font-size: 24px;
+            text-shadow: 1px 1px 0px #fff;
+        }
+
+        /* 資金表示 */
+        #dashboard {
+            background-color: #fff;
+            border: 3px solid #d32f2f;
+            border-radius: 10px;
+            padding: 15px 30px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        #money {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        /* ゲームのメイン画面（3ステージのライン） */
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+
+        /* 各セクションの共通スタイル */
+        .section {
+            border-bottom: 2px dashed #ccc;
+            padding: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .title {
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .level {
+            background: #d32f2f;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        /* 視覚的な進捗バー・ストック状態 */
+        .visual-area {
+            background: #f0f0f0;
+            height: 40px;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        .stock-display {
+            font-size: 14px;
+            z-index: 2;
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background-color: #ffe082;
+            width: 0%;
+            transition: width 0.1s linear;
+            z-index: 1;
+        }
+
+        /* アップグレードボタン */
+        .upgrade-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background 0.2s;
+            width: 100%;
+            text-align: center;
+        }
+
+        .upgrade-btn:hover {
+            background-color: #45a049;
+        }
+
+        .upgrade-btn:disabled {
+            background-color: #b0bec5;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🍜 ザクザクラーメンキング 👑</h1>
+
+    <div id="dashboard">
+        <div>総資産 (所持金)</div>
+        <div id="money">¥0</div>
+    </div>
+
+    <div id="game-container">
+
+        <div class="section" id="sec-kitchen">
+            <div class="header-info">
+                <span class="title">👨‍🍳 1. 厨房 (ラーメンを作る)</span>
+                <span class="level" id="lvl-kitchen">Lv.1</span>
+            </div>
+            <div class="visual-area">
+                <div class="progress-bar" id="bar-kitchen"></div>
+                <div class="stock-display" id="stock-kitchen">出来上がり待ち: 0 杯</div>
+            </div>
+            <div class="stats">
+                <span id="speed-kitchen">調理速度: 1.0秒/杯</span>
+                <span id="cap-kitchen">一度に作れる量: 1杯</span>
+            </div>
+            <button class="upgrade-btn" id="btn-kitchen" onclick="upgrade('kitchen')">厨房を強化 (¥10)</button>
+        </div>
+
+        <div class="section" id="sec-serve">
+            <div class="header-info">
+                <span class="title">🏃‍♂️ 2. 配膳 (カウンターへ運ぶ)</span>
+                <span class="level" id="lvl-serve">Lv.1</span>
+            </div>
+            <div class="visual-area">
+                <div class="progress-bar" id="bar-serve"></div>
+                <div class="stock-display" id="stock-serve">カウンターのラーメン: 0 杯</div>
+            </div>
+            <div class="stats">
+                <span id="speed-serve">配膳速度: 1.5秒/往復</span>
+                <span id="cap-serve">お盆の容量: 1杯</span>
+            </div>
+            <button class="upgrade-btn" id="btn-serve" onclick="upgrade('serve')">配膳員を強化 (¥15)</button>
+        </div>
+
+        <div class="section" id="sec-cash">
+            <div class="header-info">
+                <span class="title">💰 3. レジ (お客さんが食べて会計)</span>
+                <span class="level" id="lvl-cash">Lv.1</span>
+            </div>
+            <div class="visual-area">
+                <div class="progress-bar" id="bar-cash"></div>
+                <div class="stock-display" id="stock-cash">未会計の売上: ¥0</div>
+            </div>
+            <div class="stats">
+                <span id="speed-cash">会計速度: 2.0秒/回</span>
+                <span id="cap-cash">対応人数: 1人</span>
+            </div>
+            <button class="upgrade-btn" id="btn-cash" onclick="upgrade('cash')">レジを強化 (¥20)</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- ゲームのデータ状態 (状態管理) ---
+        let gameState = {
+            money: 10, // 初期費用を少しプレゼント
+            kitchen: { lv: 1, stock: 0, timer: 0, baseCost: 10, speed: 1.0, cap: 1, active: false },
+            serve: { lv: 1, stock: 0, timer: 0, baseCost: 15, speed: 1.5, cap: 1, active: false },
+            cash: { lv: 1, stock: 0, timer: 0, baseCost: 20, speed: 2.0, cap: 1, active: false }
+        };
+
+        const RAMEN_PRICE = 800; // ラーメン1杯あたりの価格
+
+        // --- ループ処理 (1秒間に60回実行して数値を動かす) ---
+        function gameLoop() {
+            const dt = 1 / 60; // 1フレームあたりの秒数(約0.016秒)
+
+            // 1. 厨房の自動調理
+            if (gameState.kitchen.stock < 50) { // パフォーマンスのため上限50杯
+                gameState.kitchen.timer += dt;
+                let duration = gameState.kitchen.speed;
+                let percent = (gameState.kitchen.timer / duration) * 100;
+                if (percent >= 100) {
+                    gameState.kitchen.stock += gameState.kitchen.cap;
+                    gameState.kitchen.timer = 0;
+                    percent = 0;
+                }
+                document.getElementById('bar-kitchen').style.width = percent + '%';
+            } else {
+                document.getElementById('bar-kitchen').style.width = '100%';
+            }
+
+            // 2. 配膳の自動回収・輸送
+            // 厨房にラーメンがあり、かつ配膳スペースが溢れていない時
+            if (gameState.kitchen.stock > 0 && gameState.serve.stock < 50) {
+                gameState.serve.timer += dt;
+                let duration = gameState.serve.speed;
+                let percent = (gameState.serve.timer / duration) * 100;
+                if (percent >= 100) {
+                    // 厨房から持っていけるだけ持っていく
+                    let takeAmount = Math.min(gameState.kitchen.stock, gameState.serve.cap);
+                    gameState.kitchen.stock -= takeAmount;
+                    gameState.serve.stock += takeAmount;
+                    gameState.serve.timer = 0;
+                    percent = 0;
+                }
+                document.getElementById('bar-serve').style.width = percent + '%';
+            } else {
+                document.getElementById('bar-serve').style.width = '0%';
+            }
+
+            // 3. レジの自動換金
+            if (gameState.serve.stock > 0) {
+                gameState.cash.timer += dt;
+                let duration = gameState.cash.speed;
+                let percent = (gameState.cash.timer / duration) * 100;
+                if (percent >= 100) {
+                    // カウンターからラーメンを消費してお金に変える
+                    let eatAmount = Math.min(gameState.serve.stock, gameState.cash.cap);
+                    gameState.serve.stock -= eatAmount;
+                    gameState.money += eatAmount * RAMEN_PRICE;
+                    gameState.cash.timer = 0;
+                    percent = 0;
+                }
+                document.getElementById('bar-cash').style.width = percent + '%';
+            } else {
+                document.getElementById('bar-cash').style.width = '0%';
+            }
+
+            // UIの文字更新
+            updateUI();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- UI（画面の文字）を更新する処理 ---
+        function updateUI() {
+            // 所持金
+            document.getElementById('money').innerText = `¥${gameState.money.toLocaleString()}`;
+
+            // 各セクションのストック数
+            document.getElementById('stock-kitchen').innerText = `出来上がり待ち: ${gameState.kitchen.stock} 杯`;
+            document.getElementById('stock-serve').innerText = `カウンターのラーメン: ${gameState.serve.stock} 杯`;
+            document.getElementById('stock-cash').innerText = `未会計の売上: ¥${(gameState.serve.stock * RAMEN_PRICE).toLocaleString()}`;
+
+            // レベルとステータス
+            document.getElementById('lvl-kitchen').innerText = `Lv.${gameState.kitchen.lv}`;
+            document.getElementById('speed-kitchen').innerText = `調理速度: ${gameState.kitchen.speed.toFixed(2)}秒/杯`;
+            document.getElementById('cap-kitchen').innerText = `一度に作れる量: ${gameState.kitchen.cap}杯`;
+
+            document.getElementById('lvl-serve').innerText = `Lv.${gameState.serve.lv}`;
+            document.getElementById('speed-serve').innerText = `配膳速度: ${gameState.serve.speed.toFixed(2)}秒/往復`;
+            document.getElementById('cap-serve').innerText = `お盆の容量: ${gameState.serve.cap}杯`;
+
+            document.getElementById('lvl-cash').innerText = `Lv.${gameState.cash.lv}`;
+            document.getElementById('speed-cash').innerText = `会計速度: ${gameState.cash.speed.toFixed(2)}秒/回`;
+            document.getElementById('cap-cash').innerText = `対応人数: ${gameState.cash.cap}人`;
+
+            // ボタンのコストと活性・非活性
+            updateButton('kitchen');
+            updateButton('serve');
+            updateButton('cash');
+        }
+
+        function getCost(type) {
+            let info = gameState[type];
+            // 指数関数によるコストインフレ式
+            return Math.floor(info.baseCost * Math.pow(1.25, info.lv - 1));
+        }
+
+        function updateButton(type) {
+            let cost = getCost(type);
+            let btn = document.getElementById(`btn-${type}`);
+            btn.innerText = `強化する (¥${cost.toLocaleString()})`;
+            
+            if (gameState.money >= cost) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        }
+
+        // --- 強化（アップグレード）ボタンを押した時の処理 ---
+        function upgrade(type) {
+            let cost = getCost(type);
+            if (gameState.money >= cost) {
+                gameState.money -= cost;
+                gameState.[type].lv += 1;
+
+                // レベルアップによる能力値の変動 (ロジック設計)
+                if (type === 'kitchen') {
+                    // スピードを少しずつ速くし、Lv5ごとに一度に作れる量を増やす
+                    gameState.kitchen.speed = Math.max(0.1, 1.0 - (gameState.kitchen.lv * 0.02));
+                    if (gameState.kitchen.lv % 5 === 0) gameState.kitchen.cap += 1;
+                } 
+                else if (type === 'serve') {
+                    gameState.serve.speed = Math.max(0.1, 1.5 - (gameState.serve.lv * 0.03));
+                    if (gameState.serve.lv % 4 === 0) gameState.serve.cap += 1;
+                } 
+                else if (type === 'cash') {
+                    gameState.cash.speed = Math.max(0.1, 2.0 - (gameState.cash.lv * 0.04));
+                    if (gameState.cash.lv % 3 === 0) gameState.cash.cap += 1;
+                }
+
+                updateUI();
+            }
+        }
+
+        // ゲーム開始！
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
